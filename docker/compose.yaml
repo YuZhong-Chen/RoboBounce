@@ -1,0 +1,48 @@
+name: "robo-bounce-ws"
+
+services:
+  robo-bounce-ws:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_UID: "${USER_UID:-1000}"
+    image: yuzhong1214/robo-bounce-ws:latest
+    container_name: robo-bounce-ws
+    stdin_open: true
+    tty: true
+    # TODO: Comment the line below if the workspace don't need to communicate through `/dev/*` devices.
+    privileged: true
+    command: /bin/bash
+    network_mode: host
+    working_dir: /home/user/RoboBounce
+    environment:
+      # Set X11 server environment variable for existing display.
+      - DISPLAY=${DISPLAY:-}
+      # References:
+      # - https://docs.ros.org/en/humble/Concepts/Intermediate/About-Domain-ID.html
+      # - https://docs.ros.org/en/humble/Tutorials/Beginner-CLI-Tools/Configuring-ROS2-Environment.html
+      # - https://docs.ros.org/en/humble/Tutorials/Demos/Logging-and-logger-configuration.html#console-output-colorizing
+      - ROS_LOCALHOST_ONLY=0
+      - ROS_DOMAIN_ID=0
+      - RCUTILS_COLORIZED_OUTPUT=1
+      - ROS2_WS=/home/user/RoboBounce
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      # Mount local timezone into container.
+      # Reference: https://stackoverflow.com/questions/57607381/how-do-i-change-timezone-in-a-docker-container
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      # Mount X11 server
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - $HOME/.Xauthority:/home/user/.Xauthority
+      # Mount root workspace to allow easy access to all workspaces.
+      - ..:/home/user/RoboBounce
+    devices:
+      - /dev:/dev # For joystick access
