@@ -44,6 +44,11 @@ RUN apt-get update && apt-get install -y \
     libgl1-mesa-dri \
     && rm -rf /var/lib/apt/lists/*
 
+# Install ROS2 packages
+RUN apt-get update && apt-get install -y \
+    ros-$ROS_DISTRO-ur \
+    && rm -rf /var/lib/apt/lists/*
+
 # Change the default user
 USER $USERNAME
 CMD ["/bin/bash"]
