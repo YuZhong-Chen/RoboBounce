@@ -50,6 +50,11 @@ RUN apt-get update && apt-get install -y \
     ros-$ROS_DISTRO-ur \
     ros-$ROS_DISTRO-effort-controllers \
     ros-$ROS_DISTRO-hardware-interface-testing \
+    # Realsense driver
+    ros-$ROS_DISTRO-librealsense2* \
+    ros-$ROS_DISTRO-launch-pytest \
+    python3-tqdm \
+    python3-requests \
     && rm -rf /var/lib/apt/lists/*
 
 # Change the default user
