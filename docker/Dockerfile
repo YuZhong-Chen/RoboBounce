@@ -55,6 +55,8 @@ RUN apt-get update && apt-get install -y \
     ros-$ROS_DISTRO-launch-pytest \
     python3-tqdm \
     python3-requests \
+    # aruco marker detection
+    ros-$ROS_DISTRO-aruco-ros \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python packages
