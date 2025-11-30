@@ -57,6 +57,11 @@ RUN apt-get update && apt-get install -y \
     python3-requests \
     && rm -rf /var/lib/apt/lists/*
 
+# Add the user to the groups for device access permissions
+RUN usermod -aG video $USERNAME && \
+    usermod -aG dialout $USERNAME && \
+    usermod -aG plugdev $USERNAME
+
 # Change the default user
 USER $USERNAME
 CMD ["/bin/bash"]
