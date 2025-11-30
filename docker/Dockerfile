@@ -57,6 +57,12 @@ RUN apt-get update && apt-get install -y \
     python3-requests \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Python packages
+RUN pip3 install \
+    # easy_handeye
+    numpy \
+    transforms3d
+
 # Add the user to the groups for device access permissions
 RUN usermod -aG video $USERNAME && \
     usermod -aG dialout $USERNAME && \
