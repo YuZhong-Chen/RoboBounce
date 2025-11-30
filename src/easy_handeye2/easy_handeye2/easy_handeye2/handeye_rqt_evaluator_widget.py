@@ -156,14 +156,14 @@ class RqtHandeyeEvaluatorWidget(QWidget):
             # TODO: provide feedback if the data is sufficient
 
         except (LookupException, ExtrapolationException, ConnectivityException) as e:
-            self.node.get_logger().error(
+            self._node.get_logger().error(
                 'The specified tf frames for the robot base and hand do not seem to be connected')
-            self.node.get_logger().error('Run the following command and check its output:')
-            self.node.get_logger().error(
+            self._node.get_logger().error('Run the following command and check its output:')
+            self._node.get_logger().error(
                 f'ros2 run tf2_ros tf2_echo {self.robot_base_frame} {self.robot_effector_frame}')
-            self.node.get_logger().error(
+            self._node.get_logger().error(
                 f'You may need to correct the base_frame or effector_frame argument passed to the easy_handeye2 launch file')
-            self.node.get_logger().error(f'Underlying tf exception: {e}')
+            self._node.get_logger().error(f'Underlying tf exception: {e}')
             return False
 
     def reset(self):
