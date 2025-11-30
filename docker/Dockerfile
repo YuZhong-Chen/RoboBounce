@@ -46,7 +46,10 @@ RUN apt-get update && apt-get install -y \
 
 # Install ROS2 packages
 RUN apt-get update && apt-get install -y \
+    # UR driver
     ros-$ROS_DISTRO-ur \
+    ros-$ROS_DISTRO-effort-controllers \
+    ros-$ROS_DISTRO-hardware-interface-testing \
     && rm -rf /var/lib/apt/lists/*
 
 # Change the default user
