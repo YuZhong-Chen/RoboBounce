@@ -1,0 +1,10 @@
+video_recorder_node:
+  ros__parameters:
+    # Subscribers
+    input_camera_info_topic: /camera/camera/color/camera_info
+    input_rgb_image_topic: /camera/camera/color/image_raw
+
+    # Parameters
+    record_length: 60.0 # seconds
+    fps: 30.0
+    output_dir: /home/user/RoboBounce/data
