@@ -29,8 +29,20 @@ ARGUMENTS = [
     ),
     DeclareLaunchArgument(
         "launch_rviz",
-        default_value="false",
+        default_value="true",
         description="Launch rviz.",
+    ),
+    DeclareLaunchArgument(
+        "rgb_profile",
+        default_value="424x240x60",
+        choices=["640x480x30", "424x240x60"],
+        description="RGB camera profile. Use 'ros2 param describe /camera/camera rgb_camera.color_profile' to see available options.",
+    ),
+    DeclareLaunchArgument(
+        "depth_profile",
+        default_value="480x270x60",
+        choices=["640x480x30", "480x270x60"],
+        description="Depth camera profile. Use 'ros2 param describe /camera/camera depth_module.depth_profile' to see available options.",
     ),
 ]
 
@@ -53,10 +65,10 @@ def generate_launch_description():
             "align_depth.enable": "true",
             "unite_imu_method": "0",
             "pointcloud.enable": LaunchConfiguration("enable_pointcloud"),
-            "depth_module.depth_profile": "640x480x30",
-            "depth_module.infra_profile": "640x480x30",
+            "depth_module.depth_profile": LaunchConfiguration("depth_profile"),
+            "depth_module.infra_profile": LaunchConfiguration("depth_profile"),
             "depth_module.depth_format": "Z16",
-            "rgb_camera.color_profile": "640x480x30",
+            "rgb_camera.color_profile": LaunchConfiguration("rgb_profile"),
             "clip_distance": LaunchConfiguration("clip_distance"),
             "hole_filling_filter.enable": LaunchConfiguration("enable_hole_filling_filter"),
         }.items(),
