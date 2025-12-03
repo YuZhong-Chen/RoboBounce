@@ -3,8 +3,8 @@ import rclpy
 from rclpy.node import Node
 
 # ROS Messages
-from builtin_interfaces.msg import Time
-from sensor_msgs.msg import CameraInfo, Image
+from sensor_msgs.msg import Image, CameraInfo
+from realsense2_camera_msgs.msg import RGBD
 
 # OpenCV
 import cv2
@@ -14,83 +14,126 @@ from cv_bridge import CvBridge
 import os
 import time
 from datetime import datetime
+import json
 
 
 class VideoRecorder(Node):
     def __init__(self):
-        super().__init__("video_recorder_node")
+        super().__init__("ram_recorder_node")
 
         # Parameters
-        self.declare_parameter("input_camera_info_topic", "/input/camera_info")
-        self.declare_parameter("input_rgb_image_topic", "/input/rgb_image")
-        self.declare_parameter("record_length", 10.0)  # seconds
-        self.declare_parameter("fps", 30.0)
+        self.declare_parameter("input_rgbd_image_topic", "/input/rgbd_image")
+        self.declare_parameter("record_length", 10.0)
         self.declare_parameter("output_dir", "/home/user/RoboBounce/data")
 
-        # Get Parameters
         self.record_length = self.get_parameter("record_length").value
-        self.fps = self.get_parameter("fps").value
-        self.output_dir = self.get_parameter("output_dir").value
+        self.output_base_dir = self.get_parameter("output_dir").value
 
         # Subscribers
-        self.camera_info_sub = self.create_subscription(CameraInfo, self.get_parameter("input_camera_info_topic").value, self.CameraInfoCallback, 10)
-        self.rgb_image_sub = self.create_subscription(Image, self.get_parameter("input_rgb_image_topic").value, self.RGBImageCallback, 10)
+        self.rgbd_image_sub = self.create_subscription(RGBD, self.get_parameter("input_rgbd_image_topic").value, self.RGBDImageCallback, 10)
 
         # CvBridge
         self.bridge = CvBridge()
 
         # Variables
-        self.writer = None
         self.is_recording = True
         self.start_time = None
-        self.total_frames = 0
+        self.total_frames_received = 0
+        self.camera_info_saved = False
+        self.frame_buffer = []
 
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        # Setup Output Directory
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.output_dir = os.path.join(self.output_base_dir, timestamp)
+        self.rgb_dir = os.path.join(self.output_dir, "rgb")
+        self.depth_dir = os.path.join(self.output_dir, "depth")
+        try:
+            os.makedirs(self.rgb_dir, exist_ok=True)
+            os.makedirs(self.depth_dir, exist_ok=True)
+            self.get_logger().info(f"Created output dir: {self.output_dir}")
+        except OSError as e:
+            self.get_logger().error(f"Could not create directory: {e}")
+            self.is_recording = False
 
-    def CameraInfoCallback(self, msg: CameraInfo):
-        pass
+    def RGBDImageCallback(self, msg: RGBD):
+        if not self.is_recording:
+            return
 
-    def RGBImageCallback(self, msg: Image):
-        # Convert ROS Image message to OpenCV image
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding="bgr8")
+        if self.start_time is None:
+            self.start_time = time.time()
+            self._save_camera_info(msg)
+            self.get_logger().info("Started recording ...")
 
-        if self.is_recording:
-            if self.writer is None:
-                self._init_writer(cv_image.shape)
-                self.start_time = time.time()
-                self.get_logger().info("Started recording video.")
+        try:
+            # Convert ROS messages to OpenCV images
+            rgb_image = self.bridge.imgmsg_to_cv2(msg.rgb, desired_encoding="bgr8")
+            depth_image = self.bridge.imgmsg_to_cv2(msg.depth, desired_encoding="16UC1")
 
-            # Write frame
-            self.writer.write(cv_image)
-            self.total_frames += 1
+            # Store in RAM buffer directly
+            self.frame_buffer.append((rgb_image, depth_image))
+            self.total_frames_received += 1
 
             # Check for timeout
             elapsed_time = time.time() - self.start_time
             if elapsed_time >= self.record_length:
-                self._stop_recording()
-                raise SystemExit
+                self.get_logger().info("Time limit reached. Stopping subscription...")
+                self.is_recording = False  # Stop accepting new images
+        except Exception as e:
+            self.get_logger().error(f"Callback Error: {e}")
 
-    def _init_writer(self, shape):
-        height, width = shape[:2]
+    def save_buffer_to_disk(self):
+        self.get_logger().info(f"Starting to write {len(self.frame_buffer)} frames to disk...")
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{timestamp}.mp4"
-        filepath = os.path.join(self.output_dir, filename)
+        total_saved = 0
+        # Use simple compression for faster writing (Level 1)
+        compression_params = [cv2.IMWRITE_PNG_COMPRESSION, 1]
+        for i, (rgb_img, depth_img) in enumerate(self.frame_buffer):
+            try:
+                frame_index_str = str(i).zfill(6)
+                rgb_path = os.path.join(self.rgb_dir, f"rgb_{frame_index_str}.png")
+                depth_path = os.path.join(self.depth_dir, f"depth_{frame_index_str}.png")
 
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        self.writer = cv2.VideoWriter(filepath, fourcc, self.fps, (width, height))
+                cv2.imwrite(rgb_path, rgb_img, compression_params)
+                cv2.imwrite(depth_path, depth_img, compression_params)
+                total_saved += 1
 
-        self.get_logger().info(f"Video: {filepath}, Record length: {self.record_length}s, FPS: {self.fps}")
+                if total_saved % 100 == 0:
+                    self.get_logger().info(f"Saved {total_saved}/{len(self.frame_buffer)} frames...")
+            except Exception as e:
+                self.get_logger().error(f"Write Error at frame {i}: {e}")
 
-    def _stop_recording(self):
-        if self.writer is not None:
-            self.writer.release()
-            self.writer = None
-            self.get_logger().info("Stopped recording video.")
-            self.get_logger().info(f"Total frames recorded: {self.total_frames}, FPS: {self.total_frames / self.record_length:.2f}")
-        self.is_recording = False
+        self.get_logger().info("Finished writing all frames.")
+        self.get_logger().info(f"Total frames saved: {total_saved}")
+        self.get_logger().info(f"Approximate Recording FPS: {total_saved / self.record_length:.2f}")
 
-    def __del__(self):
-        if self.writer is not None:
-            self.writer.release()
+    def _save_camera_info(self, msg: RGBD):
+        if self.camera_info_saved:
+            return
+
+        camera_info_filepath = os.path.join(self.output_dir, "camera_info.json")
+
+        def info_to_dict(info):
+            return {
+                "width": info.width,
+                "height": info.height,
+                "distortion_model": info.distortion_model,
+                "D": list(info.d),
+                "K": list(info.k),
+                "R": list(info.r),
+                "P": list(info.p),
+                "binning_x": info.binning_x,
+                "binning_y": info.binning_y,
+            }
+
+        data = {
+            "rgb": info_to_dict(msg.rgb_camera_info),
+            "depth": info_to_dict(msg.depth_camera_info),
+        }
+
+        try:
+            with open(camera_info_filepath, "w") as f:
+                json.dump(data, f, indent=4)
+            self.get_logger().info(f"Saved camera info to {camera_info_filepath}")
+            self.camera_info_saved = True
+        except IOError as e:
+            self.get_logger().error(f"Failed to save camera info: {e}")
