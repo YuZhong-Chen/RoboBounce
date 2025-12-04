@@ -112,6 +112,6 @@ def generate_launch_description():
     ld.add_action(switch_to_servo_controller)
     ld.add_action(trigger_servo_start)
     ld.add_action(launch_ur_servo_control_node)
-    ld.add_action(event_handler_on_exit)
+    # ld.add_action(event_handler_on_exit)
 
     return ld
