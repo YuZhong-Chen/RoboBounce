@@ -50,6 +50,7 @@ RUN apt-get update && apt-get install -y \
     ros-$ROS_DISTRO-ur \
     ros-$ROS_DISTRO-effort-controllers \
     ros-$ROS_DISTRO-hardware-interface-testing \
+    ros-$ROS_DISTRO-ros2-control \
     # Realsense driver
     ros-$ROS_DISTRO-librealsense2* \
     ros-$ROS_DISTRO-launch-pytest \
