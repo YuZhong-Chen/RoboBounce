@@ -19,7 +19,7 @@ import json
 
 class VideoRecorder(Node):
     def __init__(self):
-        super().__init__("ram_recorder_node")
+        super().__init__("video_recorder_node")
 
         # Parameters
         self.declare_parameter("input_rgbd_image_topic", "/input/rgbd_image")
