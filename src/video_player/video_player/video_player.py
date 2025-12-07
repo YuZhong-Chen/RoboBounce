@@ -4,6 +4,7 @@ from rclpy.node import Node
 
 # ROS Messages
 from sensor_msgs.msg import Image, CameraInfo
+from realsense2_camera_msgs.msg import RGBD
 
 # OpenCV
 import cv2
@@ -22,6 +23,7 @@ class VideoPlayer(Node):
         self.declare_parameter("output_rgb_image_topic", "/output/rgb_image")
         self.declare_parameter("output_depth_image_topic", "/output/depth_image")
         self.declare_parameter("output_camera_info_topic", "/output/camera_info")
+        self.declare_parameter("output_rgbd_image_topic", "/output/rgbd_image")
         self.declare_parameter("video_fps", 60.0)
         self.declare_parameter("video_repeat", True)
         self.declare_parameter("video_path", "/home/user/RoboBounce/data")
@@ -35,6 +37,7 @@ class VideoPlayer(Node):
         self.rgb_publisher = self.create_publisher(Image, self.get_parameter("output_rgb_image_topic").value, 10)
         self.depth_publisher = self.create_publisher(Image, self.get_parameter("output_depth_image_topic").value, 10)
         self.camera_info_publisher = self.create_publisher(CameraInfo, self.get_parameter("output_camera_info_topic").value, 10)
+        self.rgbd_publisher = self.create_publisher(RGBD, self.get_parameter("output_rgbd_image_topic").value, 10)
 
         # Timer
         self.image_timer = self.create_timer(1.0 / self.video_fps, self.publish_image_callback)
@@ -100,20 +103,29 @@ class VideoPlayer(Node):
             else:
                 self.get_logger().info("Finished playing video.")
                 raise SystemExit
+        current_timestamp = self.get_clock().now().to_msg()
 
         # Publish RGB Image
         rgb_image_msg = self.bridge.cv2_to_imgmsg(self.rgb_images[self.current_frame_index], encoding="bgr8")
-        rgb_image_msg.header.stamp = self.get_clock().now().to_msg()
+        rgb_image_msg.header.stamp = current_timestamp
         self.rgb_publisher.publish(rgb_image_msg)
 
         # Publish Depth Image
         depth_image_msg = self.bridge.cv2_to_imgmsg(self.depth_images[self.current_frame_index], encoding="16UC1")
-        depth_image_msg.header.stamp = self.get_clock().now().to_msg()
+        depth_image_msg.header.stamp = current_timestamp
         self.depth_publisher.publish(depth_image_msg)
 
         # Publish Camera Info
         camera_info_msg = self.camera_info
-        camera_info_msg.header.stamp = self.get_clock().now().to_msg()
+        camera_info_msg.header.stamp = current_timestamp
         self.camera_info_publisher.publish(camera_info_msg)
+
+        # Publish RGBD Image
+        rgbd_msg = RGBD()
+        rgbd_msg.header.stamp = current_timestamp
+        rgbd_msg.rgb = rgb_image_msg
+        rgbd_msg.depth = depth_image_msg
+        rgbd_msg.rgb_camera_info = camera_info_msg
+        self.rgbd_publisher.publish(rgbd_msg)
 
         self.current_frame_index += 1
