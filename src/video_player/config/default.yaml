@@ -1,0 +1,11 @@
+video_player_node:
+  ros__parameters:
+    # Publishers
+    output_rgb_image_topic: /video_player/rgb_image
+    output_depth_image_topic: /video_player/depth_image
+    output_camera_info_topic: /video_player/camera_info
+
+    # Parameters
+    video_fps: 60.0
+    video_repeat: True
+    video_path: /home/user/RoboBounce/data/20251203_173749
