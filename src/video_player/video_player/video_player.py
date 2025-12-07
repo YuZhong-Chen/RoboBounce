@@ -24,11 +24,13 @@ class VideoPlayer(Node):
         self.declare_parameter("output_depth_image_topic", "/output/depth_image")
         self.declare_parameter("output_camera_info_topic", "/output/camera_info")
         self.declare_parameter("output_rgbd_image_topic", "/output/rgbd_image")
+        self.declare_parameter("image_frame_link", "camera_link")
         self.declare_parameter("video_fps", 60.0)
         self.declare_parameter("video_repeat", True)
         self.declare_parameter("video_path", "/home/user/RoboBounce/data")
 
         # Get Parameters
+        self.image_frame_link = self.get_parameter("image_frame_link").value
         self.video_fps = self.get_parameter("video_fps").value
         self.video_repeat = self.get_parameter("video_repeat").value
         self.video_path = self.get_parameter("video_path").value
@@ -107,21 +109,25 @@ class VideoPlayer(Node):
 
         # Publish RGB Image
         rgb_image_msg = self.bridge.cv2_to_imgmsg(self.rgb_images[self.current_frame_index], encoding="bgr8")
+        rgb_image_msg.header.frame_id = self.image_frame_link
         rgb_image_msg.header.stamp = current_timestamp
         self.rgb_publisher.publish(rgb_image_msg)
 
         # Publish Depth Image
         depth_image_msg = self.bridge.cv2_to_imgmsg(self.depth_images[self.current_frame_index], encoding="16UC1")
+        depth_image_msg.header.frame_id = self.image_frame_link
         depth_image_msg.header.stamp = current_timestamp
         self.depth_publisher.publish(depth_image_msg)
 
         # Publish Camera Info
         camera_info_msg = self.camera_info
+        camera_info_msg.header.frame_id = self.image_frame_link
         camera_info_msg.header.stamp = current_timestamp
         self.camera_info_publisher.publish(camera_info_msg)
 
         # Publish RGBD Image
         rgbd_msg = RGBD()
+        rgbd_msg.header.frame_id = self.image_frame_link
         rgbd_msg.header.stamp = current_timestamp
         rgbd_msg.rgb = rgb_image_msg
         rgbd_msg.depth = depth_image_msg

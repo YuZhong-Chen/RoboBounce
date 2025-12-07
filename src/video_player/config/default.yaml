@@ -7,6 +7,7 @@ video_player_node:
     output_rgbd_image_topic: /camera/camera/rgbd
 
     # Parameters
+    image_frame_link: camera_link
     video_fps: 60.0
     video_repeat: True
     video_path: /home/user/RoboBounce/data/20251203_173749
