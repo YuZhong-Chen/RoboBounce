@@ -1,10 +1,12 @@
 # ROS
 import rclpy
 from rclpy.node import Node
+from tf2_ros import TransformBroadcaster
 
 # ROS Messages
 from sensor_msgs.msg import Image, CameraInfo
 from realsense2_camera_msgs.msg import RGBD
+from geometry_msgs.msg import TransformStamped
 
 # OpenCV
 import cv2
@@ -31,13 +33,16 @@ class ObjectEstimation(Node):
         # Publishers
         self.result_image_pub = self.create_publisher(Image, self.get_parameter("output_result_image_topic").value, 10)
 
-        # CvBridge
+        # Other
         self.bridge = CvBridge()
+        self.tf_broadcaster = TransformBroadcaster(self)
 
         # Variables
         self.yolo_model = None
         self.last_detection_time = None
         self.last_detection_center = None
+        self.camera_intrinsics = None
+        self.camera_frame_id = None
 
         # Constants
         self.DETECTION_TIMEOUT = 0.5  # seconds
@@ -49,6 +54,12 @@ class ObjectEstimation(Node):
         self.get_logger().info("YOLO model loaded successfully.")
 
     def rgbd_image_callback(self, msg: RGBD):
+        if self.camera_intrinsics is None:
+            fx, fy = msg.rgb_camera_info.k[0], msg.rgb_camera_info.k[4]
+            cx, cy = msg.rgb_camera_info.k[2], msg.rgb_camera_info.k[5]
+            self.camera_intrinsics = {"fx": fx, "fy": fy, "cx": cx, "cy": cy}
+            self.camera_frame_id = msg.header.frame_id
+
         # Convert images
         rgb_image = self.bridge.imgmsg_to_cv2(msg.rgb, desired_encoding="bgr8")
         depth_image = self.bridge.imgmsg_to_cv2(msg.depth, desired_encoding="16UC1")
@@ -108,6 +119,9 @@ class ObjectEstimation(Node):
                     object_depth = np.mean(valid_depths) / 1000.0
                 # self.get_logger().info(f"Obj: x={current_center[0]}, y={current_center[1]}, depth={object_depth:.3f} m")
 
+            # Publish TF
+            self.publish_object_tf(current_center, object_depth, msg.header.stamp)
+
             # Draw results
             cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
             cv2.putText(result_image, f"Conf: {target_box.conf[0]:.2f}", (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
@@ -115,3 +129,27 @@ class ObjectEstimation(Node):
         result_msg = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
         result_msg.header = msg.header
         self.result_image_pub.publish(result_msg)
+
+    def publish_object_tf(self, object_center, object_depth, timestamp):
+        if self.camera_intrinsics is None:
+            return
+
+        # Compute 3D coordinates
+        u, v = object_center
+        X = (u - self.camera_intrinsics["cx"]) * object_depth / self.camera_intrinsics["fx"]
+        Y = (v - self.camera_intrinsics["cy"]) * object_depth / self.camera_intrinsics["fy"]
+        Z = object_depth
+
+        # Create TransformStamped message
+        t = TransformStamped()
+        t.header.stamp = timestamp
+        t.header.frame_id = self.camera_frame_id
+        t.child_frame_id = "object"
+        t.transform.translation.x = float(X)
+        t.transform.translation.y = float(Y)
+        t.transform.translation.z = float(Z)
+        t.transform.rotation.x = 0.0
+        t.transform.rotation.y = 0.0
+        t.transform.rotation.z = 0.0
+        t.transform.rotation.w = 1.0
+        self.tf_broadcaster.sendTransform(t)
