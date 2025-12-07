@@ -1,7 +1,7 @@
 object_estimation_node:
   ros__parameters:
     # Subscribers
-    input_rgb_image_topic: /video_player/rgb_image
+    input_rgbd_image_topic: /camera/camera/rgbd
 
     # Publishers
     output_result_image_topic: /object_estimation/result_image
