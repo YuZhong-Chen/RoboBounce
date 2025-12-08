@@ -58,7 +58,7 @@ class ObjectEstimation(Node):
             fx, fy = msg.rgb_camera_info.k[0], msg.rgb_camera_info.k[4]
             cx, cy = msg.rgb_camera_info.k[2], msg.rgb_camera_info.k[5]
             self.camera_intrinsics = {"fx": fx, "fy": fy, "cx": cx, "cy": cy}
-            self.camera_frame_id = msg.header.frame_id
+            self.camera_frame_id = msg.rgb_camera_info.header.frame_id
 
         # Convert images
         rgb_image = self.bridge.imgmsg_to_cv2(msg.rgb, desired_encoding="bgr8")
@@ -119,8 +119,8 @@ class ObjectEstimation(Node):
                     object_depth = np.mean(valid_depths) / 1000.0
                 # self.get_logger().info(f"Obj: x={current_center[0]}, y={current_center[1]}, depth={object_depth:.3f} m")
 
-            # Publish TF
-            self.publish_object_tf(current_center, object_depth, msg.header.stamp)
+                # Publish TF
+                self.publish_object_tf(current_center, object_depth, msg.header.stamp)
 
             # Draw results
             cv2.rectangle(result_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
