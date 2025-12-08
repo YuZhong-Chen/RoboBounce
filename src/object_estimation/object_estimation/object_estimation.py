@@ -52,7 +52,7 @@ class ObjectEstimation(Node):
         self.camera_intrinsics = None
         self.camera_frame_id = None
         self.last_time = None
-        self.prev_z_val = 0.0
+        self.prev_ball_xyz = np.zeros(3)
         self.dt = 1.0 / self.get_parameter("fps").value
         self.DETECTION_TIMEOUT = 0.5  # seconds
 
@@ -168,13 +168,15 @@ class ObjectEstimation(Node):
             if oe_xyz is not None:
                 self.publish_tf_xyz(oe_xyz, "one_euro", msg.header.stamp)
 
-            # Calculate Velocity (Finite Difference)
+            # Calculate velocity (Finite difference)
             # This is important for the controller to know if the ball is falling
-            vel_z = (final_xyz[2] - self.prev_z_val) / dt
-            self.prev_z_val = final_xyz[2]
+            vel_xyz = (final_xyz - self.prev_ball_xyz) / dt
+            self.prev_ball_xyz = final_xyz
 
             v_msg = Vector3()
-            v_msg.z = float(vel_z)
+            v_msg.x = float(vel_xyz[0])
+            v_msg.y = float(vel_xyz[1])
+            v_msg.z = float(vel_xyz[2])
             self.vel_pub.publish(v_msg)
 
         # Visualization
