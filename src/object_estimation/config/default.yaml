@@ -5,6 +5,8 @@ object_estimation_node:
 
     # Publishers
     output_result_image_topic: /object_estimation/result_image
+    output_ball_velocity_topic: /object_estimation/ball_velocity
 
     # Parameters
     yolo_model_path: /home/user/RoboBounce/models/yolo.pt
+    filter_mode: kalman  # kalman, one_euro, raw
