@@ -26,8 +26,12 @@ class URServoControl(Node):
     def publish_servo_command_callback(self):
         # Create message
         twist_msg = TwistStamped()
-        twist_msg.header.frame_id = "base_link"
         twist_msg.header.stamp = self.get_clock().now().to_msg()
+
+        # Choose reference frame
+        # Use "racket" if commands are given in end-effector frame
+        # Use "world" if commands are given in world frame
+        twist_msg.header.frame_id = "racket"
 
         # Set velocities
         twist_msg.twist.linear.x = 0.0
