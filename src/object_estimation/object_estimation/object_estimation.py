@@ -127,7 +127,7 @@ class ObjectEstimation(Node):
         # Kalman Filter Update
         kf_xyz = self.kf.update(raw_xyz, dt)
 
-        # B. 1 Euro Filter Update
+        # 1 Euro Filter Update
         oe_xyz = None
         if raw_xyz is not None:
             if self.one_euro_filters is None:
@@ -168,7 +168,7 @@ class ObjectEstimation(Node):
             if oe_xyz is not None:
                 self.publish_tf_xyz(oe_xyz, "one_euro", msg.header.stamp)
 
-            # Calculate velocity (Finite difference)
+            # Publish velocity
             # This is important for the controller to know if the ball is falling
             vel_xyz = (final_xyz - self.prev_ball_xyz) / dt
             self.prev_ball_xyz = final_xyz
@@ -189,28 +189,18 @@ class ObjectEstimation(Node):
             u = int(xyz[0] * self.camera_intrinsics["fx"] / xyz[2] + self.camera_intrinsics["cx"])
             v = int(xyz[1] * self.camera_intrinsics["fy"] / xyz[2] + self.camera_intrinsics["cy"])
             cv2.drawMarker(result_image, (u, v), color, marker_type, 20, 2)
-
         draw_marker(raw_xyz, (0, 255, 0), cv2.MARKER_SQUARE)
         draw_marker(kf_xyz, (0, 0, 255), cv2.MARKER_CROSS)
         draw_marker(oe_xyz, (255, 0, 0), cv2.MARKER_DIAMOND)
 
         # Draw Info at top-left
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.5
-        thickness = 2
-        start_x = 5
-        start_y = 25
-        line_height = 25
-
         def draw_text_line(label, xyz, color, line_idx):
-            y = start_y + (line_idx * line_height)
+            y = 25 + (line_idx * 25)
             if xyz is not None:
                 text = f"{label}: {xyz[0]:.2f}, {xyz[1]:.2f}, {xyz[2]:.2f}m"
             else:
                 text = f"{label}: No Data"
-            cv2.putText(result_image, text, (start_x, y), font, font_scale, color, thickness)
-
-        # Display lines (No "Mode" display as requested)
+            cv2.putText(result_image, text, (5, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         draw_text_line("Raw", raw_xyz, (0, 255, 0), 0)
         draw_text_line("KF", kf_xyz, (0, 0, 255), 1)
         draw_text_line("1E", oe_xyz, (255, 0, 0), 2)
