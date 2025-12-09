@@ -129,7 +129,7 @@
   <link name="racket">
     <visual>
       <geometry>
-        <cylinder radius="0.08" length="0.01"/> 
+        <cylinder radius="0.075" length="0.01"/> 
       </geometry>
       <material name="racket_red">
         <color rgba="0.8 0.1 0.1 1"/>
@@ -138,7 +138,7 @@
     </visual>
     <collision>
       <geometry>
-        <cylinder radius="0.08" length="0.01"/>
+        <cylinder radius="0.075" length="0.01"/>
       </geometry>
       <origin xyz="0 0 0" rpy="0 0 0"/>
     </collision>
@@ -149,13 +149,13 @@
       <material name="handle">
         <color rgba="0 0 0 1"/>
       </material>
-      <origin xyz="-0.13 0 0" rpy="0 1.5708 0"/> 
+      <origin xyz="-0.12 0 0" rpy="0 1.5708 0"/> 
     </visual>
     <collision>
       <geometry>
         <cylinder radius="0.015" length="0.10"/>
       </geometry>
-      <origin xyz="-0.13 0 0" rpy="0 1.5708 0"/>
+      <origin xyz="-0.12 0 0" rpy="0 1.5708 0"/>
     </collision>
     <inertial>
       <mass value="0.25"/> 
@@ -167,7 +167,7 @@
   <joint name="tool0_to_racket" type="fixed">
     <parent link="$(arg tf_prefix)tool0"/>
     <child link="racket"/>
-    <origin xyz="0 0 0.20" rpy="0 -1.57 0"/>
+    <origin xyz="0 0 0.19" rpy="1.57 -1.57 0"/>
   </joint>
 
   <xacro:if value="$(arg sim_gazebo)">
