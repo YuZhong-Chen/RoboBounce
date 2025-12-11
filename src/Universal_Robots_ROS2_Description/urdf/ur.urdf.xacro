@@ -170,6 +170,34 @@
     <origin xyz="0 0 0.19" rpy="1.57 -1.57 0"/>
   </joint>
 
+  <link name="calibration_plate">
+    <!-- <visual>
+      <geometry>
+        <box size="0.1 0.1 0.005"/> 
+      </geometry>
+      <material name="plate_grey">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.1 0.1 0.005"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.0"/> <origin xyz="0 0 0"/>
+      <inertia ixx="0.0" ixy="0.0" ixz="0.0" iyy="0.0" iyz="0.0" izz="0.0"/>
+    </inertial> -->
+  </link>
+
+  <joint name="tool0_to_calibration_plate" type="fixed">
+    <parent link="$(arg tf_prefix)tool0"/>
+    <child link="calibration_plate"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/>
+  </joint>
+
   <xacro:if value="$(arg sim_gazebo)">
     <!-- Gazebo plugins -->
     <gazebo reference="world">
