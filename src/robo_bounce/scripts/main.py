@@ -2,6 +2,7 @@
 
 import rclpy
 import subprocess
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from robo_bounce.robo_bounce import RoboBounce
 
 
@@ -11,7 +12,9 @@ def main(args=None):
     robo_bounce_node = RoboBounce()
 
     try:
-        rclpy.spin(robo_bounce_node)
+        executor = MultiThreadedExecutor(num_threads=4)
+        executor.add_node(robo_bounce_node)
+        executor.spin()
     except KeyboardInterrupt:
         # Publish stop command on shutdown
         robo_bounce_node.get_logger().info("Shutdown RoboBounce node...")

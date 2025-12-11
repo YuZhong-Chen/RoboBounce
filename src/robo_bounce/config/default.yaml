@@ -4,4 +4,15 @@ robo_bounce_node:
     output_servo_topic: /servo_node/delta_twist_cmds
 
     # Parameters
-    publish_frequency: 50.0
+    publish_frequency: 25.0
+    racket_frame_id: racket
+    object_frame_id: one_euro  # kalman, one_euro, raw
+    timer_delay: 0.05
+    tf_timeout: 0.0
+
+    racket_max_x: 0.7
+    racket_min_x: 0.45
+    racket_max_y: 0.1
+    racket_min_y: -0.5
+    racket_max_z: 0.7
+    racket_min_z: 0.4
