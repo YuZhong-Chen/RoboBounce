@@ -11,3 +11,7 @@
 # Models
 /models/*
 !/models/.gitkeep
+
+# config
+/config/*
+!/config/.gitkeep
