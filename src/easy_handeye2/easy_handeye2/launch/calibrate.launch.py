@@ -36,12 +36,12 @@ ARGUMENTS = [
     ),
     DeclareLaunchArgument(
         "robot_base_frame",
-        default_value="base_link",
+        default_value="world",
         description="TF frame of the robot base.",
     ),
     DeclareLaunchArgument(
         "robot_effector_frame",
-        default_value="tool0",
+        default_value="calibration_plate",
         description="TF frame of the robot end-effector.",
     ),
 ]

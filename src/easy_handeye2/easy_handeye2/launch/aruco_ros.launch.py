@@ -13,7 +13,7 @@ def generate_launch_description():
                 parameters=[
                     {
                         "image_is_rectified": True,
-                        "marker_size": 0.07,
+                        "marker_size": 0.096,
                         "marker_id": 582,
                         "reference_frame": "camera_color_optical_frame",
                         "camera_frame": "camera_color_optical_frame",
