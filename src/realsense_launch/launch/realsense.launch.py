@@ -13,6 +13,11 @@ ARGUMENTS = [
         description="Initial reset of the device.",
     ),
     DeclareLaunchArgument(
+        "enable_depth",
+        default_value="true",
+        description="Enable depth stream.",
+    ),
+    DeclareLaunchArgument(
         "enable_pointcloud",
         default_value="false",
         description="Enable pointcloud.",
@@ -29,13 +34,13 @@ ARGUMENTS = [
     ),
     DeclareLaunchArgument(
         "launch_rviz",
-        default_value="true",
+        default_value="false",
         description="Launch rviz.",
     ),
     DeclareLaunchArgument(
         "rgb_profile",
         default_value="424x240x60",
-        choices=["640x480x30", "424x240x60"],
+        choices=["640x480x30", "424x240x60", "1920x1080x8"],
         description="RGB camera profile. Use 'ros2 param describe /camera/camera rgb_camera.color_profile' to see available options.",
     ),
     DeclareLaunchArgument(
@@ -56,13 +61,13 @@ def generate_launch_description():
         launch_arguments={
             "config_file": "''",
             "initial_reset": LaunchConfiguration("initial_reset"),
-            "enable_rgbd": "true",
+            "enable_rgbd": LaunchConfiguration("enable_depth"),
             "enable_color": "true",
-            "enable_depth": "true",
-            "enable_sync": "true",
+            "enable_depth": LaunchConfiguration("enable_depth"),
+            "enable_sync": LaunchConfiguration("enable_depth"),
             "enable_gyro": "false",
             "enable_accel": "false",
-            "align_depth.enable": "true",
+            "align_depth.enable": LaunchConfiguration("enable_depth"),
             "unite_imu_method": "0",
             "pointcloud.enable": LaunchConfiguration("enable_pointcloud"),
             "depth_module.depth_profile": LaunchConfiguration("depth_profile"),
