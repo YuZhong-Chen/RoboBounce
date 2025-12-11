@@ -38,6 +38,18 @@ class RoboBounce(Node):
         self.declare_parameter("pid_z_ki", 0.0)
         self.declare_parameter("pid_z_kd", 3.0)
         self.declare_parameter("pid_z_max_speed", 2.0)
+        self.declare_parameter("pid_roll_kp", 20.0)
+        self.declare_parameter("pid_roll_ki", 0.0)
+        self.declare_parameter("pid_roll_kd", 5.0)
+        self.declare_parameter("pid_roll_max_speed", 6.0)
+        self.declare_parameter("pid_pitch_kp", 10.0)
+        self.declare_parameter("pid_pitch_ki", 0.0)
+        self.declare_parameter("pid_pitch_kd", 0.0)
+        self.declare_parameter("pid_pitch_max_speed", 2.0)
+        self.declare_parameter("pid_yaw_kp", 10.0)
+        self.declare_parameter("pid_yaw_ki", 0.0)
+        self.declare_parameter("pid_yaw_kd", 0.0)
+        self.declare_parameter("pid_yaw_max_speed", 2.0)
 
         # Racket pose limits
         self.declare_parameter("racket_x_min", 0.45)
@@ -78,15 +90,24 @@ class RoboBounce(Node):
         self.pid_x = PIDController(self.get_parameter("pid_x_kp").value, self.get_parameter("pid_x_ki").value, self.get_parameter("pid_x_kd").value, self.get_parameter("pid_x_max_speed").value)
         self.pid_y = PIDController(self.get_parameter("pid_y_kp").value, self.get_parameter("pid_y_ki").value, self.get_parameter("pid_y_kd").value, self.get_parameter("pid_y_max_speed").value)
         self.pid_z = PIDController(self.get_parameter("pid_z_kp").value, self.get_parameter("pid_z_ki").value, self.get_parameter("pid_z_kd").value, self.get_parameter("pid_z_max_speed").value)
+        self.pid_roll = PIDController(self.get_parameter("pid_roll_kp").value, self.get_parameter("pid_roll_ki").value, self.get_parameter("pid_roll_kd").value, self.get_parameter("pid_roll_max_speed").value)
+        self.pid_pitch = PIDController(self.get_parameter("pid_pitch_kp").value, self.get_parameter("pid_pitch_ki").value, self.get_parameter("pid_pitch_kd").value, self.get_parameter("pid_pitch_max_speed").value)
+        self.pid_yaw = PIDController(self.get_parameter("pid_yaw_kp").value, self.get_parameter("pid_yaw_ki").value, self.get_parameter("pid_yaw_kd").value, self.get_parameter("pid_yaw_max_speed").value)
 
         # Variables
         self.racket_pose = None
         self.object_pose = None
         self.racket_target_x = None
+        self.racket_target_roll = 0.0
+        self.racket_target_pitch = 0.0
+        self.racket_target_yaw = 0.0
 
     def publish_servo_command_callback(self):
-        # Get current poses
+        # Get current time with delay
         current_time = self.get_clock().now() - rclpy.duration.Duration(seconds=self.timer_delay)
+        current_time_nanosec = current_time.nanoseconds
+
+        # Get current poses
         self.racket_pose = self.get_racket_pose(timestamp=current_time)
         self.object_pose = self.get_object_pose(timestamp=current_time)
         if self.racket_pose is not None and self.racket_target_x is None:
@@ -102,16 +123,21 @@ class RoboBounce(Node):
         err_x = self.racket_target_x - self.racket_pose.translation.x
         err_y = self.object_pose.translation.y - self.racket_pose.translation.y
         err_z = self.object_pose.translation.z - self.racket_pose.translation.z
+        err_roll = self.racket_target_roll - self.racket_pose.rotation.x
+        err_pitch = self.racket_target_pitch - self.racket_pose.rotation.y
+        err_yaw = self.racket_target_yaw - self.racket_pose.rotation.z
 
         # Apply offsets
-        err_y -= 0.2
+        # err_z += 0.02
 
         # Update PID controllers
         # self.get_logger().info(f"Diff - x: {err_x:.3f}, y: {err_y:.3f}, z: {err_z:.3f}")
-        current_time_nanosec = current_time.nanoseconds
         vx = self.pid_x.update(err_x, current_time_nanosec)
         vy = self.pid_y.update(err_y, current_time_nanosec)
         vz = self.pid_z.update(err_z, current_time_nanosec)
+        v_roll = self.pid_roll.update(err_roll, current_time_nanosec)
+        v_pitch = self.pid_pitch.update(err_pitch, current_time_nanosec)
+        v_yaw = self.pid_yaw.update(err_yaw, current_time_nanosec)
 
         # Create message
         twist_msg = TwistStamped()
@@ -122,9 +148,9 @@ class RoboBounce(Node):
         twist_msg.twist.linear.x = float(vx)
         twist_msg.twist.linear.y = float(vy)
         twist_msg.twist.linear.z = float(vz)
-        twist_msg.twist.angular.x = 0.0
-        twist_msg.twist.angular.y = 0.0
-        twist_msg.twist.angular.z = 0.0
+        twist_msg.twist.angular.x = float(v_roll)
+        twist_msg.twist.angular.y = float(v_pitch)
+        twist_msg.twist.angular.z = float(v_yaw)
 
         # Apply racket pose limits
         if (self.racket_pose.translation.x >= self.racket_x_max and twist_msg.twist.linear.x > 0) or (self.racket_pose.translation.x <= self.racket_x_min and twist_msg.twist.linear.x < 0):
@@ -135,7 +161,8 @@ class RoboBounce(Node):
             twist_msg.twist.linear.z = 0.0
 
         # Publish the message
-        self.get_logger().info(f"Cmd  - vx: {twist_msg.twist.linear.x:.3f}, vy: {twist_msg.twist.linear.y:.3f}, vz: {twist_msg.twist.linear.z:.3f}")
+        self.get_logger().info(f"Linear  - vx: {twist_msg.twist.linear.x:.3f}, vy: {twist_msg.twist.linear.y:.3f}, vz: {twist_msg.twist.linear.z:.3f}")
+        self.get_logger().info(f"Angular - vx: {twist_msg.twist.angular.x:.3f}, vy: {twist_msg.twist.angular.y:.3f}, vz: {twist_msg.twist.angular.z:.3f}")
         self.servo_pub.publish(twist_msg)
 
     def publish_stop_command(self):
