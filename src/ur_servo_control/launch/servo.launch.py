@@ -37,7 +37,7 @@ from ur_moveit_config.launch_common import load_yaml
 from launch_ros.parameter_descriptions import ParameterValue
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, ExecuteProcess
 from launch.conditions import IfCondition
 from launch.substitutions import (
     Command,
@@ -298,4 +298,15 @@ def generate_launch_description():
         DeclareLaunchArgument("launch_servo", default_value="true", description="Launch Servo?")
     )
 
-    return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup)])
+    # Start servo node
+    trigger_servo_start = ExecuteProcess(
+        cmd=[
+            "ros2", "service", "call", 
+            "/servo_node/start_servo", 
+            "std_srvs/srv/Trigger", 
+            "{}"
+        ],
+        output="screen"
+    )
+
+    return LaunchDescription(declared_arguments + [OpaqueFunction(function=launch_setup), trigger_servo_start])
