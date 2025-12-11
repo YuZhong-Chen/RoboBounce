@@ -9,4 +9,4 @@ object_estimation_node:
 
     # Parameters
     yolo_model_path: /home/user/RoboBounce/models/yolo.pt
-    filter_mode: kalman  # kalman, one_euro, raw
+    filter_mode: one_euro  # kalman, one_euro, raw
