@@ -51,6 +51,9 @@ class RoboBounce(Node):
         self.declare_parameter("pid_yaw_kd", 0.0)
         self.declare_parameter("pid_yaw_max_speed", 2.0)
 
+        self.declare_parameter("balance_kp", 0.02)
+        self.declare_parameter("balance_kd", 0.6)
+
         # Racket pose limits
         self.declare_parameter("racket_x_min", 0.45)
         self.declare_parameter("racket_x_max", 0.7)
@@ -71,6 +74,9 @@ class RoboBounce(Node):
         self.racket_y_max = self.get_parameter("racket_y_max").value
         self.racket_z_min = self.get_parameter("racket_z_min").value
         self.racket_z_max = self.get_parameter("racket_z_max").value
+
+        self.balance_kp = self.get_parameter("balance_kp").value
+        self.balance_kd = self.get_parameter("balance_kd").value
 
         # Publishers
         self.servo_pub = self.create_publisher(TwistStamped, self.get_parameter("output_servo_topic").value, 10)
@@ -101,6 +107,8 @@ class RoboBounce(Node):
         self.racket_target_roll = 0.0
         self.racket_target_pitch = 0.0
         self.racket_target_yaw = 0.0
+        self.prev_object_pose = None
+        self.prev_time_nanosec = None
 
     def publish_servo_command_callback(self):
         # Get current time with delay
@@ -116,8 +124,23 @@ class RoboBounce(Node):
             self.pid_x.reset()
             self.pid_y.reset()
             self.pid_z.reset()
+            self.prev_object_pose = None
+            self.prev_time_nanosec = None
             self.publish_stop_command()
             return
+
+        # Update racket racket roll
+        error_y_pos = self.object_pose.translation.y - self.racket_pose.translation.y
+        ball_vel_y = 0.0
+        if self.prev_object_pose is not None and self.prev_time_nanosec is not None:
+            dt = (current_time_nanosec - self.prev_time_nanosec) / 1e9
+            if dt > 0.001:
+                ball_vel_y = (self.object_pose.translation.y - self.prev_object_pose.translation.y) / dt
+        self.prev_object_pose = self.object_pose
+        self.prev_time_nanosec = current_time_nanosec
+        target_roll = (self.balance_kp * error_y_pos) + (self.balance_kd * ball_vel_y)
+        max_roll_angle = 0.13
+        self.racket_target_roll = max(min(target_roll, max_roll_angle), -max_roll_angle)
 
         # Compute errors
         err_x = self.racket_target_x - self.racket_pose.translation.x
@@ -128,7 +151,7 @@ class RoboBounce(Node):
         err_yaw = self.racket_target_yaw - self.racket_pose.rotation.z
 
         # Apply offsets
-        # err_z += 0.02
+        err_z += 0.02
 
         # Update PID controllers
         # self.get_logger().info(f"Diff - x: {err_x:.3f}, y: {err_y:.3f}, z: {err_z:.3f}")
@@ -145,9 +168,9 @@ class RoboBounce(Node):
         twist_msg.header.frame_id = "world"
 
         # Set velocities
-        twist_msg.twist.linear.x = float(vx)
-        twist_msg.twist.linear.y = float(vy)
-        twist_msg.twist.linear.z = float(vz)
+        # twist_msg.twist.linear.x = float(vx)
+        # twist_msg.twist.linear.y = float(vy)
+        # twist_msg.twist.linear.z = float(vz)
         twist_msg.twist.angular.x = float(v_roll)
         twist_msg.twist.angular.y = float(v_pitch)
         twist_msg.twist.angular.z = float(v_yaw)
