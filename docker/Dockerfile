@@ -1,5 +1,5 @@
 # Base Image: https://hub.docker.com/r/nvidia/cuda/tags
-FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu22.04
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu22.04
 
 ARG USERNAME=user
 ARG USER_UID=1000
