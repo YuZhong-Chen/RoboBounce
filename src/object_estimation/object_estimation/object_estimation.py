@@ -135,8 +135,8 @@ class ObjectEstimation(Node):
                 # X (Left/Right): Standard
                 # Y (Height): Needs speed/responsiveness -> High Beta
                 # Z (Depth): Needs stability -> Low Beta, Low Cutoff
-                config_xy = {"min_cutoff": 3.0, "beta": 0.9, "d_cutoff": 1.0}
-                config_z = {"min_cutoff": 0.2, "beta": 0.05, "d_cutoff": 1.0}
+                config_xy = {"min_cutoff": 3.0, "beta": 1.2, "d_cutoff": 1.0}
+                config_z = {"min_cutoff": 0.2, "beta": 0.1, "d_cutoff": 1.0}
                 self.one_euro_filters = [
                     OneEuroFilter(now_sec, raw_xyz[0], **config_xy),
                     OneEuroFilter(now_sec, raw_xyz[1], **config_xy),
