@@ -3,14 +3,20 @@ import os
 import numpy as np
 
 # ================= Configuration =================
-DATA_ROOT = "/home/user/RoboBounce/data/20251203_174215"
+DATA_ROOT = "/home/user/RoboBounce/data/20251215_112935"
 FPS = 60
+
+# Save video
+SAVE_VIDEO = True
+OUTPUT_FILENAME = "output.mp4"
 # =================================================
 
 
 def main():
     rgb_dir = os.path.join(DATA_ROOT, "rgb")
     depth_dir = os.path.join(DATA_ROOT, "depth")
+    output_path = os.path.join(DATA_ROOT, OUTPUT_FILENAME)
+
     if not os.path.exists(rgb_dir) or not os.path.exists(depth_dir):
         print(f"Error: Directories not found. Check path: {DATA_ROOT}")
         return
@@ -32,6 +38,7 @@ def main():
     # Setup window and callback
     cv2.namedWindow("Player")
     cv2.setMouseCallback("Player", mouse_callback)
+    video_writer = None
 
     for i, (rgb_f, depth_f) in enumerate(zip(rgb_files, depth_files)):
         rgb_path = os.path.join(rgb_dir, rgb_f)
@@ -52,10 +59,9 @@ def main():
             dist_m = dist_mm / 1000.0
 
         # --- Visualization ---
-        # Normalize depth for display (0m to 2.5m mapped to 0-255)
-        # This is strictly for human viewing; do not use this for analysis.
+        # Normalize depth for display (0m to X.Xm mapped to 0-255)
         depth_vis = frame_depth_raw.astype(np.float32)
-        depth_vis = np.clip(depth_vis, 0, 2500) / 2500.0 * 255.0
+        depth_vis = np.clip(depth_vis, 0, 1700) / 1700.0 * 255.0
         depth_vis = depth_vis.astype(np.uint8)
         depth_vis = cv2.applyColorMap(depth_vis, cv2.COLORMAP_JET)
 
@@ -66,6 +72,15 @@ def main():
 
         # Combine RGB and Depth side-by-side
         combined = np.hstack((frame_rgb, depth_vis))
+
+        if SAVE_VIDEO:
+            if video_writer is None:
+                h_out, w_out = combined.shape[:2]
+                fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+                print(f"Initializing video writer: {w_out}x{h_out} @ {FPS} fps to {output_path}")
+                video_writer = cv2.VideoWriter(output_path, fourcc, FPS, (w_out, h_out))
+            video_writer.write(combined)
+
         cv2.imshow("Player", combined)
 
         # Handle user input
@@ -74,6 +89,11 @@ def main():
             break
         elif key == ord(" "):
             cv2.waitKey(0)
+
+    if video_writer is not None:
+        video_writer.release()
+        print(f"Video saved successfully at: {output_path}")
+
     cv2.destroyAllWindows()
 
 
