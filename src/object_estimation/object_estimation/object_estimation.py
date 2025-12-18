@@ -27,6 +27,7 @@ class ObjectEstimation(Node):
         self.declare_parameter("input_rgbd_image_topic", "/input/rgbd_image")
         self.declare_parameter("output_result_image_topic", "/output/result_image")
         self.declare_parameter("output_ball_velocity_topic", "/output/ball_velocity")
+        self.declare_parameter("output_result_rgbd_topic", "/output/result_rgbd_image")
         self.declare_parameter("yolo_model_path", "/home/user/RoboBounce/models/yolo.pt")
         self.declare_parameter("filter_mode", "raw")
         self.declare_parameter("fps", 60.0)
@@ -40,6 +41,7 @@ class ObjectEstimation(Node):
         # Publishers
         self.result_image_pub = self.create_publisher(Image, self.get_parameter("output_result_image_topic").value, 10)
         self.vel_pub = self.create_publisher(Vector3, self.get_parameter("output_ball_velocity_topic").value, 10)
+        self.result_rgbd_pub = self.create_publisher(RGBD, self.get_parameter("output_result_rgbd_topic").value, 10)
 
         # Other
         self.bridge = CvBridge()
@@ -136,7 +138,7 @@ class ObjectEstimation(Node):
                 # Y (Height): Needs speed/responsiveness -> High Beta
                 # Z (Depth): Needs stability -> Low Beta, Low Cutoff
                 config_xy = {"min_cutoff": 3.0, "beta": 1.2, "d_cutoff": 1.0}
-                config_z = {"min_cutoff": 0.2, "beta": 0.1, "d_cutoff": 1.0}
+                config_z = {"min_cutoff": 0.2, "beta": 0.05, "d_cutoff": 1.0}
                 self.one_euro_filters = [
                     OneEuroFilter(now_sec, raw_xyz[0], **config_xy),
                     OneEuroFilter(now_sec, raw_xyz[1], **config_xy),
@@ -209,6 +211,15 @@ class ObjectEstimation(Node):
         result_msg = self.bridge.cv2_to_imgmsg(result_image, encoding="bgr8")
         result_msg.header = msg.header
         self.result_image_pub.publish(result_msg)
+
+        # Publish RGBD Image
+        result_rgbd_msg = RGBD()
+        result_rgbd_msg.header = msg.header
+        result_rgbd_msg.rgb = msg.rgb
+        result_rgbd_msg.depth = msg.depth
+        result_rgbd_msg.rgb_camera_info = msg.rgb_camera_info
+        result_rgbd_msg.depth_camera_info = msg.depth_camera_info
+        self.result_rgbd_pub.publish(result_rgbd_msg)
 
     def compute_raw_xyz(self, box, depth_image):
         x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
