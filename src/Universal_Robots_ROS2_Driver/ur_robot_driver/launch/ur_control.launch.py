@@ -231,6 +231,7 @@ def launch_setup(context, *args, **kwargs):
         ],
         output="screen",
         condition=IfCondition(use_fake_hardware),
+        remappings=[("/joint_states", "/ur_joint_states")],
     )
 
     ur_control_node = Node(
@@ -243,6 +244,17 @@ def launch_setup(context, *args, **kwargs):
         ],
         output="screen",
         condition=UnlessCondition(use_fake_hardware),
+        remappings=[("/joint_states", "/ur_joint_states")],
+    )
+
+    joint_state_publisher_node = Node(
+        package="joint_state_publisher",
+        executable="joint_state_publisher",
+        name="joint_state_publisher",
+        parameters=[{
+            "source_list": ["/ur_joint_states", "/rg2_joint_states"],
+            "rate": 125.0,
+        }]
     )
 
     dashboard_client_node = Node(
@@ -393,6 +405,7 @@ def launch_setup(context, *args, **kwargs):
     nodes_to_start = [
         control_node,
         ur_control_node,
+        joint_state_publisher_node,
         dashboard_client_node,
         robot_state_helper_node,
         tool_communication_node,
