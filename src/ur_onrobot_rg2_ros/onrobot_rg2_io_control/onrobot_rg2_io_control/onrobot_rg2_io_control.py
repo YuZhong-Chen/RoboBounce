@@ -7,6 +7,9 @@ from ur_msgs.msg import ToolDataMsg
 from std_msgs.msg import Float32
 from sensor_msgs.msg import JointState
 
+# ROS Services
+from ur_msgs.srv import SetIO
+
 
 class OnrobotRG2IOControl(Node):
     def __init__(self):
@@ -17,9 +20,11 @@ class OnrobotRG2IOControl(Node):
         self.declare_parameter("input_tool_data_topic", "/io_and_status_controller/tool_data")
         self.declare_parameter("output_joint_state_topic", "/rg2_joint_states")
         self.declare_parameter("simulation_mode", False)
+        self.declare_parameter("force_mode", "high")  # high or low
 
         # Get Parameters
         self.simulation_mode = self.get_parameter("simulation_mode").value
+        self.force_mode = self.get_parameter("force_mode").value
 
         # Publishers
         self.joint_state_publisher = self.create_publisher(JointState, self.get_parameter("output_joint_state_topic").value, 10)
@@ -27,6 +32,12 @@ class OnrobotRG2IOControl(Node):
         # Subscribers
         self.command_subscription = self.create_subscription(Float32, self.get_parameter("input_command_topic").value, self.command_callback, 10)
         self.tool_data_subscription = self.create_subscription(ToolDataMsg, self.get_parameter("input_tool_data_topic").value, self.tool_data_callback, 10)
+
+        # Services
+        self.set_io_client = self.create_client(SetIO, "/io_and_status_controller/set_io")
+        while not self.set_io_client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info("/io_and_status_controller/set_io service not available, waiting...")
+        self.set_force_mode(self.force_mode)
 
         # Timers
         joint_states_frequency = 125.0  # Hz
@@ -38,9 +49,21 @@ class OnrobotRG2IOControl(Node):
         self.current_gripper_width = self.MAX_GRIPPER_WIDTH  # cm
 
     def command_callback(self, msg: Float32):
-        # TODO: Send the command to the "/io_and_status_controller/set_io" service.
-        self.current_command = msg.data
-        # self.get_logger().info(f"Command: {self.current_command}")
+        request = SetIO.Request()
+        request.fun = 1  # Set digital output
+        request.pin = 16  # Pin 16 controls the RG2 gripper
+        request.state = 0.0 if msg.data >= 0.5 else 1.0  # Open if command >= 0.5, else close
+        self.set_io_client.call_async(request)
+
+    def set_force_mode(self, mode: str):
+        request = SetIO.Request()
+        request.fun = 1  # Set digital output
+        request.pin = 17  # Pin 17 controls the force mode
+        if mode == "high":
+            request.state = 0.0  # High force mode
+        else:
+            request.state = 1.0  # Low force mode
+        self.set_io_client.call_async(request)
 
     def tool_data_callback(self, msg: ToolDataMsg):
         # Convert the voltage reading to gripper width.

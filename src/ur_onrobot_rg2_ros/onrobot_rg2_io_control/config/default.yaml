@@ -9,3 +9,4 @@ onrobot_rg2_io_control_node:
 
     # Parameters
     simulation_mode: False
+    force_mode: high  # "high" or "low" force mode
