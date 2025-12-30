@@ -29,15 +29,13 @@ class OnrobotRG2IOControl(Node):
         self.tool_data_subscription = self.create_subscription(ToolDataMsg, self.get_parameter("input_tool_data_topic").value, self.tool_data_callback, 10)
 
         # Timers
-        if self.simulation_mode:
-            joint_states_frequency = 125.0  # Hz
-            self.joint_states_timer = self.create_timer(1.0 / joint_states_frequency, self.publish_joint_states)
-        else:
-            raise NotImplementedError("Real hardware mode is not implemented yet.")
+        joint_states_frequency = 125.0  # Hz
+        self.joint_states_timer = self.create_timer(1.0 / joint_states_frequency, self.publish_joint_states)
 
         # Variables
-        self.MAX_GRIPPER_WIDTH = 11.0  # cm
+        self.MAX_GRIPPER_WIDTH = 10.1  # cm
         self.current_command = 1.0
+        self.current_gripper_width = self.MAX_GRIPPER_WIDTH  # cm
 
     def command_callback(self, msg: Float32):
         # TODO: Send the command to the "/io_and_status_controller/set_io" service.
@@ -45,9 +43,15 @@ class OnrobotRG2IOControl(Node):
         # self.get_logger().info(f"Command: {self.current_command}")
 
     def tool_data_callback(self, msg: ToolDataMsg):
-        # TODO: Transform the voltage readings to the gripper state.
-        # self.get_logger().info(f"analog_input2: {msg.analog_input2}")
-        pass
+        # Convert the voltage reading to gripper width.
+        # NOTE: Using a polynomial fit for the gripper data to achieve higher accuracy.
+        #       The official linear mapping provided in the manual (shown below) is less precise:
+        #           width = (voltage / UR_VOLTAGE_MAX) * 11.0  # units: cm
+        #       UR_VOLTAGE_MAX varies by configuration: 3.7V (for 0-5V range) or 3.0V (for 0-10V range).
+        voltage = msg.analog_input2
+        width = -0.8 * (voltage**2) + 6.6 * voltage - 1.6  # cm
+        width = max(0.0, min(width, self.MAX_GRIPPER_WIDTH))
+        self.current_gripper_width = width
 
     def cm_to_rad(self, width):
         # NOTE: We map the gripper width to the joint angle linearly, this may not be accurate.
@@ -56,9 +60,11 @@ class OnrobotRG2IOControl(Node):
         width = max(0.0, min(width, self.MAX_GRIPPER_WIDTH))
         return (width / self.MAX_GRIPPER_WIDTH) * (max_rad - min_rad) + min_rad
 
-    def publish_joint_states(self, current_gripper_width: float = 0.0):
+    def publish_joint_states(self):
+        if self.simulation_mode:
+            self.current_gripper_width = self.current_command * self.MAX_GRIPPER_WIDTH
         joint_state_msg = JointState()
         joint_state_msg.header.stamp = self.get_clock().now().to_msg()
         joint_state_msg.name = ["rg2_gripper_joint"]
-        joint_state_msg.position = [self.cm_to_rad(self.current_command * self.MAX_GRIPPER_WIDTH if self.simulation_mode else current_gripper_width)]
+        joint_state_msg.position = [self.cm_to_rad(self.current_gripper_width)]
         self.joint_state_publisher.publish(joint_state_msg)

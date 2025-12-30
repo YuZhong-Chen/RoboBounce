@@ -8,4 +8,4 @@ onrobot_rg2_io_control_node:
     output_joint_state_topic: /rg2_joint_states
 
     # Parameters
-    simulation_mode: True
+    simulation_mode: False
