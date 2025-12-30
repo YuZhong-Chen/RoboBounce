@@ -2,6 +2,7 @@
 
 import rclpy
 import subprocess
+from rclpy.executors import SingleThreadedExecutor, MultiThreadedExecutor
 from ur_pose_tracking.ur_pose_tracking import URPoseTracking
 
 
@@ -11,7 +12,9 @@ def main(args=None):
     ur_pose_tracking = URPoseTracking()
 
     try:
-        rclpy.spin(ur_pose_tracking)
+        executor = MultiThreadedExecutor(num_threads=4)
+        executor.add_node(ur_pose_tracking)
+        executor.spin()
     except KeyboardInterrupt:
         # Publish stop command on shutdown
         ur_pose_tracking.get_logger().info("Shutdown UR pose tracking node...")
